@@ -19,9 +19,10 @@ SoftwareSerial mySerial(4, 5);
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 uint8_t id, chonMuc;
 void setup() {
+
   // put your setup code here, to run once:
   Serial.begin(9600);
-  Serial.print("Nhap 1 Them, 2 Xoa van tay");
+  Serial.print("\nNhap 1 Them, 3 Xoa, 2 Tim van tay");
   while (!Serial);  // For Yun/Leo/Micro/Zero/...
   delay(100);
   Serial.println("\n\nAdafruit Fingerprint sensor enrollment");
@@ -59,17 +60,22 @@ uint8_t readnumber1(void) {
 }
 
 void loop() {
+  Serial.print("\nNhap 1 Them, 3 Xoa, 2 Tim vân tay, cham cong");
   // put your main code here, to run repeatedly:
-  Firebase.setInt(firebaseData, "/ttChamCong", 0);
-  Serial.print("\nNhap 1 Them, 2 Xoa, 3 Tim van tay");
-  chonMuc = readnumber1();
+  // Firebase.setInt(firebaseData, "/ttChamCong", 0);
+  Firebase.getInt(firebaseData, "/TTID");
+  chonMuc = firebaseData.intData();
+  // chonMuc = readnumber1();
   if(chonMuc == 1){
+    // Serial.print("\nNhập ID muốn thêm");
+    // id = readnumber();
+    Firebase.getInt(firebaseData, "/idThem");
+    id = firebaseData.intData();
     Serial.print("\nDat ngon tay muon them voi "); Serial.println(id);
-    id = readnumber();
     Serial.print("ID Dang ky #");
     Serial.println(id);  
     while (!  getFingerprintEnroll() );
-
+    Firebase.setInt(firebaseData, "/idThem", id);
   } else if( chonMuc == 2){
     int attempts = 0;
     Serial.print("\nDat ngon tay muon kiem tra");
@@ -84,10 +90,15 @@ void loop() {
   } else if(chonMuc == 3){
       Firebase.getInt(firebaseData, "/idXoa");
       uint8_t idXoa = firebaseData.intData();
+      // Serial.print("\nNhập ID muốn xóa");
+      // id = readnumber();
+      deleteFingerprint(idXoa);
+      Serial.print("\nXóa thành công id: "); Serial.println(idXoa);
   }
 }
 // Ham them dau van tay
 uint8_t getFingerprintEnroll() {
+  delay(2000);
   int p = -1;
   // Serial.print("\nCho ngoi tay can lay van #"); Serial.println(id);
   while (p != FINGERPRINT_OK) {
@@ -110,12 +121,15 @@ uint8_t getFingerprintEnroll() {
   p = finger.storeModel(id);
   Serial.print("\nThem van tay thanh cong"); 
   Firebase.setInt(firebaseData, "/idThem", p);
+  Firebase.setInt(firebaseData, "/TTID", 0);
   return true;
 }
 // Ham tìm kiem dau van tay 
 int getFingerprintIDez() {
+  Firebase.getInt(firebaseData, "/idMuonChamCong");
+  int idMuonCC = firebaseData.intData();
   Serial.print("\nHam 2 chay"); 
-  delay(1000);
+  delay(3000);
   uint8_t p = finger.getImage();
   if (p != FINGERPRINT_OK)  return -1;
 
@@ -129,8 +143,15 @@ int getFingerprintIDez() {
   Serial.print("\nTim thay ID #"); Serial.print(finger.fingerID);
   Serial.print(" do tin cay "); Serial.println(finger.confidence);
   Firebase.setInt(firebaseData, "/ttChamCong", 1);
-  Firebase.setInt(firebaseData, "/idChamCong", 1);
+  // Firebase.setInt(firebaseData, "/idChamCong", 1);
+  
+  
+  if(idMuonCC == finger.fingerID){
+    Firebase.setInt(firebaseData, "/idChamCong", finger.fingerID);
+  }
+  Firebase.setInt(firebaseData, "/TTID", 0);
   return finger.fingerID;
+  
 }
 // Ham xoa dau van tay
 uint8_t deleteFingerprint(uint8_t id) {
@@ -138,7 +159,11 @@ uint8_t deleteFingerprint(uint8_t id) {
   p = finger.deleteModel(id);
   Serial.println("\nXoa thanh cong");
   Serial.println(id);
+  Firebase.setInt(firebaseData, "/idXoa", 0);
+  Firebase.setInt(firebaseData, "/TTID", 0);
   return p;
+  
+
 }
 
 
